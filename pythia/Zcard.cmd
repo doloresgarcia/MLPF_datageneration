@@ -30,8 +30,6 @@ PartonLevel:FSR = off               ! final-state radiation
 ! 4) Hard process : H->qq at Ecm=125 GeV
 Beams:eCM = 125.09  ! CM energy of collision
 
-
-WeakSingleBoson:ffbar2gmZ = on
-23:onMode = off
-23:onIfAny = 3
+25:onMode = off
+25:onIfAny = 3
 
