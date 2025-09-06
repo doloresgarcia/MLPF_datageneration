@@ -123,6 +123,8 @@ void count_sim_decays() {
 
         decayHappenedFlags = std::vector<bool>(decayNames.size()); // reset every event
         for(const auto& mc : mcs){
+            auto mcStable = mc.generatorStatus() == 1 || mc.generatorStatus() == 0;
+            if (not mcStable) continue;
 
             for(int j=0; j < decayNames.size(); ++j){
                 auto isDecay = decayFuncs[j];
