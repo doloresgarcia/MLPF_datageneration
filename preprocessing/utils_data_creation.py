@@ -63,6 +63,9 @@ track_feature_order = [
     "omega", 
     "Z0", 
     "time", 
+    "px_calo", # at vertex
+    "py_calo",#7
+    "pz_calo",#8
 ]
 hit_feature_order = [
     "elemtype",
@@ -132,8 +135,6 @@ def get_genparticles_and_adjacencies( prop_data, hit_data, calohit_links, sitrac
         pandora_features = pandora_to_features(prop_data, iev)
         hit_to_pfo = hit_pfo_adj(prop_data, hit_idx_local_to_global, iev)
         n_pfo = awkward.count(pandora_features["PDG"])
-        print(n_pfo)
-        print(np.unique(hit_to_pfo[1]))
         pfo_to_calohit_matrix = coo_matrix((hit_to_pfo[2], (hit_to_pfo[1], hit_to_pfo[0])), shape=(n_pfo, n_hit))
         pfo_to_calohit = pfo_to_calohit_matrix.toarray().argmax(axis=0)
         pfo_to_calohit_nolink_mask  = (pfo_to_calohit_matrix.sum(axis=0).reshape(-1))==0
@@ -174,6 +175,7 @@ def get_genparticles_and_adjacencies( prop_data, hit_data, calohit_links, sitrac
     gp_to_calohit_hitcount = coo_matrix((np.ones_like(genparticle_to_hit[2]), (genparticle_to_hit[0], genparticle_to_hit[1])), shape=(n_gp, n_hit))
     gp_hitcount = gp_to_calohit_hitcount.toarray().sum(axis=1) #hit count of particles
     gp_to_calohit = gp_to_calohit.toarray().argmax(axis=0).reshape(-1) #hit to MC link 
+    gp_to_calohit_beforecalomother = gp_to_calohit
     gp_to_calohit = np.array(gen_features["index_calomother"])[gp_to_calohit] #assign to the MC parent that was produced before calo (index of calomother)
     gp_to_recoE = coo_matrix((hit_features["energy"], (gp_to_calohit, np.arange(n_hit))), shape=(n_gp, n_hit)).toarray().sum(axis=1)
     # print(gp_to_recoE)
@@ -191,7 +193,7 @@ def get_genparticles_and_adjacencies( prop_data, hit_data, calohit_links, sitrac
     # particle has more than 10 MeV enegy in the calo
     gp_in_calo = np.array(gp_to_recoE>0.01) 
     gp_in_tracker = np.array(gp_to_track >= 0.6)[:, 0]
-    gp_interacted_with_detector = gp_in_tracker | gp_in_calo
+    gp_interacted_with_detector = gp_in_tracker*gp_in_calo+gp_in_calo
     mask_visible = awkward.to_numpy( gp_interacted_with_detector)
     idx_all_masked = np.where(mask_visible)[0]
     genpart_idx_all_to_filtered = {idx_all: idx_filtered for idx_filtered, idx_all in enumerate(idx_all_masked)}
@@ -210,7 +212,6 @@ def get_genparticles_and_adjacencies( prop_data, hit_data, calohit_links, sitrac
     # assign 0,..N indices to adjacency, -1 if genparticle not in filtered list
     hit_to_gp = index_to_range(gp_to_calohit, genpart_idx_all_to_filtered)
     track_to_gp = index_to_range(gp_to_track_index, genpart_idx_all_to_filtered)
-
  
     return EventData(
         gen_features,
@@ -220,7 +221,8 @@ def get_genparticles_and_adjacencies( prop_data, hit_data, calohit_links, sitrac
         track_to_gp,
         pandora_features, 
         pfo_to_calohit, 
-        pfo_to_track
+        pfo_to_track, 
+        gp_to_calohit_beforecalomother
     )
 
 def isProducedInCalo(vertices, BarrelRadius=2150, EndCapZ=2307):
@@ -425,11 +427,20 @@ def track_to_features(prop_data, iev):
     ret["referencePoint_calo.x"] = awkward.to_numpy(prop_data["_SiTracks_Refitted_trackStates"]["_SiTracks_Refitted_trackStates.referencePoint.x"][iev][trackstate_idx+3])
     ret["referencePoint_calo.y"] = awkward.to_numpy(prop_data["_SiTracks_Refitted_trackStates"]["_SiTracks_Refitted_trackStates.referencePoint.y"][iev][trackstate_idx+3])
     ret["referencePoint_calo.z"] = awkward.to_numpy(prop_data["_SiTracks_Refitted_trackStates"]["_SiTracks_Refitted_trackStates.referencePoint.z"][iev][trackstate_idx+3])
+    ret["phi_calo"] = awkward.to_numpy(prop_data["_SiTracks_Refitted_trackStates"]["_SiTracks_Refitted_trackStates.phi"][iev][trackstate_idx+3])
+    ret["tanLambda_calo"] = awkward.to_numpy(prop_data["_SiTracks_Refitted_trackStates"]["_SiTracks_Refitted_trackStates.tanLambda"][iev][trackstate_idx+3])
+    ret["omega_calo"] = awkward.to_numpy(prop_data["_SiTracks_Refitted_trackStates"]["_SiTracks_Refitted_trackStates.omega"][iev][trackstate_idx+3])
 
     ret["pt"] = awkward.to_numpy(track_pt(ret["omega"]))
-    ret["px"] = awkward.to_numpy(np.cos(ret["phi"])) * ret["pt"]
+    # from the track state at IP (location 1)
+    ret["px"] = awkward.to_numpy(np.cos(ret["phi"])) * ret["pt"] 
     ret["py"] = awkward.to_numpy(np.sin(ret["phi"])) * ret["pt"]
     ret["pz"] = awkward.to_numpy(ret["tanLambda"]) * ret["pt"]
+
+    ret["pt_calo"] = awkward.to_numpy(track_pt(ret["omega_calo"]))
+    ret["px_calo"] = awkward.to_numpy(np.cos(ret["phi_calo"])) * ret["pt_calo"] 
+    ret["py_calo"] = awkward.to_numpy(np.sin(ret["phi_calo"])) * ret["pt_calo"]
+    ret["pz_calo"] = awkward.to_numpy(ret["tanLambda_calo"]) * ret["pt_calo"]
 
     ret["p"] = np.sqrt(ret["px"] ** 2 + ret["py"] ** 2 + ret["pz"] ** 2)
     cos_theta = np.divide(ret["pz"], ret["p"], where=ret["p"] > 0)
@@ -448,9 +459,8 @@ def track_to_features(prop_data, iev):
     return awkward.Record(ret)
 
 def track_pt(omega):
-    a = 3 * 10**-4
+    a = 2.99792e-4
     b = 2  # B-field in tesla, for CLD
-
     return a * np.abs(b / omega)
 
 def genparticle_track_adj(sitrack_links, iev):
@@ -495,7 +505,8 @@ class EventData:
         track_to_gp,
         pandora_features=None,
         pfo_to_calohit = None, 
-        pfo_to_track = None
+        pfo_to_track = None, 
+        gp_to_calohit_beforecalomother = None
     ):
         self.gen_features = gen_features  # feature matrix of the genparticles
         self.hit_features = hit_features  # feature matrix of the calo hits
@@ -505,6 +516,7 @@ class EventData:
         self.pandora_features = pandora_features  # feature matrix of the PandoraPFOs
         self.pfo_to_calohit = pfo_to_calohit # array linking pfo to calohit
         self. pfo_to_track = pfo_to_track # array linking pfo to track
+        self.gp_to_calohit_beforecalomother = gp_to_calohit_beforecalomother
 
 
 def hit_pfo_adj(prop_data, hit_idx_local_to_global, iev):

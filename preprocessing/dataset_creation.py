@@ -2,12 +2,11 @@ import os
 import numpy as np
 import awkward
 import uproot
-import vector
 import tqdm
 from preprocessing.utils_data_creation import get_feature_matrix, sanitize, get_reco_properties, build_dummy_array
 from preprocessing.utils_data_creation import track_feature_order, hit_feature_order, particle_feature_order, PandoraPFO_feature_order
 from preprocessing.utils_data_creation import  get_genparticles_and_adjacencies, mc_coll, track_coll
-
+import time 
 
 def process_one_file(fn, ofn, eval_dataset):
 
@@ -137,6 +136,7 @@ def process_one_file(fn, ofn, eval_dataset):
             this_ev["X_pandora"] = X_pandora
             this_ev["pfo_calohit"] = gpdata.pfo_to_calohit
             this_ev["pfo_track"] = gpdata.pfo_to_track
+            
 
         this_ev = awkward.Record(this_ev)
         ret.append(this_ev)
@@ -146,7 +146,7 @@ def process_one_file(fn, ofn, eval_dataset):
         if len(awkward.flatten(ret[k])) == 0:
             ret[k] = build_dummy_array(len(ret[k]), np.float32)
     ret = awkward.Record(ret)
-    awkward.to_parquet(ret, ofn)
+    awkward.to_parquet(ret, ofn, compression="snappy")
 
 def parse_args():
     import argparse
@@ -163,7 +163,10 @@ def process(args):
     infile = args.input
     outfile = os.path.join(args.outpath, os.path.basename(infile).split(".")[0] + ".parquet")
     eval_dataset = args.dataset 
+    tic = time.time()
     process_one_file(infile, outfile, eval_dataset)
+    toc = time.time()
+    print("Processing time: ", toc - tic)
 
 
 if __name__ == "__main__":
