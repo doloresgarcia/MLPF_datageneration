@@ -26,7 +26,7 @@ cd ${DIR}/${SEED}
 
 
 wrapperfunction() {
-    source /cvmfs/sw.hsf.org/key4hep/setup.sh -r 2025-01-28
+    source /cvmfs/sw.hsf.org/key4hep/setup.sh 
 }
 wrapperfunction
 
@@ -65,5 +65,19 @@ k4run CLDReconstruction.py -n ${NEV}  --inputFiles out_sim_edm4hep.root --output
 
 
 
+wrapperfunction() {
+    source /cvmfs/sft.cern.ch/lcg/views/LCG_108/x86_64-el9-gcc15-opt/setup.sh
+}
+wrapperfunction
+
+if [ ! -f "out_reco_edm4hep_REC.parquet" ]; then
+    cp -r ${HOMEDIR}/preprocessing/ .
+    python  -m preprocessing.dataset_creation --input out_reco_edm4hep_REC.edm4hep.root  --outpath .  
+fi
+
 mkdir -p ${OUTPUTDIR}
-xrdcp ${DIR}/${SEED}/out_reco_REC.edm4hep.root ${OUTPUTDIR}/reco_${SAMPLE}_${SEED}.root
+python /afs/cern.ch/work/f/fccsw/public/FCCutils/eoscopy.py out_reco_edm4hep_REC.parquet ${OUTPUTDIR}/pf_tree_${SEED}.parquet
+python /afs/cern.ch/work/f/fccsw/public/FCCutils/eoscopy.py out_reco_edm4hep_REC.edm4hep.root ${OUTPUTDIR}/out_reco_edm4hep_REC_${SEED}.edm4hep.root
+
+
+rm -r ${DIR}/${SEED}
