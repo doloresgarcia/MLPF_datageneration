@@ -2,12 +2,12 @@
 
 ####################################################################################################
 HOMEDIR=${1} # path to where it's ran from e.g. /afs/cern.ch/user/f/fmokhtar/MLPF_datageneration
-GUNCARD=${2}  
-NEV=${3}
-SEED=${4}
-OUTPUTDIR=${5}
-DIR=${6}
-SAMPLE=${7} # can be "gun" or "p8_ee_tt_ecm365"
+GUNCARD=${2}  # example p8_ee_Zuds_ecm91
+NEV=${3} # 100
+SEED=${4} # 1
+OUTPUTDIR=${5} # dir where the final file is copied
+DIR=${6} # dir where intermidiate files are created 
+SAMPLE=${7} # can be "gun" or "Zcard"
 CLDGEO=${8} # default is CLD_o2_v06 (CLD+ARC is CLD_o3_v01 https://github.com/key4hep/k4geo/blob/main/FCCee/CLD/compact/CLD_o3_v01/CLD_o3_v01.xml)
 
 if [ -z "$CLDGEO" ]; then
@@ -17,6 +17,7 @@ else
     echo "Will use CLD geometry version $CLDGEO"
 fi
 
+# git clone the CLDConfig repo and set the version (eg. CLDConfig_2025_05_26)
 PATH_CLDCONFIG=/afs/cern.ch/user/f/fmokhtar/MLPF_datageneration/CLDConfig/CLDConfig
 
 ####################################################################################################
@@ -46,7 +47,7 @@ then
     ./build/gun ${PATH_GUN_CONFIG} 
 fi
 
-if [[ "${SAMPLE}" == "p8_ee_tt_ecm365" ]]
+if [[ "${SAMPLE}" == "Zcard" ]]
 then
     xrdcp ${HOMEDIR}/pythia/${SAMPLE}.cmd card.cmd
     echo "Random:seed=${SEED}" >> card.cmd

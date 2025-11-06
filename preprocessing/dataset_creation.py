@@ -83,17 +83,24 @@ def process_one_file(fn, ofn, eval_dataset):
         "HCALOther": arrs["HCALOther"].array(),
         "MUON": arrs["MUON"].array(),
     }
-
     ret = []
+    i =0 
+    dic = {}
+    dic["energy_track"] = []
+    dic["index_no_track"] = []
+    dic["energy_no_track"] = []
+    dic["phi_no_track"] = []
+    dic["phi_track"] = []
     for iev in tqdm.tqdm(range(arrs.num_entries), total=arrs.num_entries):
-        print("Processing event ", iev)
-        # get the reco particles
+        # print("Processing event ", iev)
+        # if i ==5:
+            # get the reco particles
         reco_arr = get_reco_properties( prop_data, iev)
         reco_type = np.abs(reco_arr["PDG"])
-       
-       
+    
+    
         # get the genparticles and the links between genparticles and tracks/clusters
-        gpdata = get_genparticles_and_adjacencies( prop_data, hit_data, calohit_links, sitrack_links, iev, collectionIDs, eval_dataset)
+        gpdata, dic  = get_genparticles_and_adjacencies( prop_data, hit_data, calohit_links, sitrack_links, iev, collectionIDs, eval_dataset, dic)
 
 
         n_tracks = len(gpdata.track_features["type"])
@@ -131,6 +138,7 @@ def process_one_file(fn, ofn, eval_dataset):
             "X_gen": X_gen, 
             "ygen_track": ygen_track,
             "ygen_hit": ygen_hit,
+            "ygen_hit_calomother": gpdata.gp_to_calohit_beforecalomother
         }
         if eval_dataset:
             this_ev["X_pandora"] = X_pandora
@@ -140,13 +148,17 @@ def process_one_file(fn, ofn, eval_dataset):
 
         this_ev = awkward.Record(this_ev)
         ret.append(this_ev)
-
+        # i = i +1
+ 
+       
     ret = {k: awkward.from_iter([r[k] for r in ret]) for k in ret[0].fields}
     for k in ret.keys():
         if len(awkward.flatten(ret[k])) == 0:
             ret[k] = build_dummy_array(len(ret[k]), np.float32)
     ret = awkward.Record(ret)
     awkward.to_parquet(ret, ofn, compression="snappy")
+    # np.save('data.npy', dic, allow_pickle=True)
+
 
 def parse_args():
     import argparse

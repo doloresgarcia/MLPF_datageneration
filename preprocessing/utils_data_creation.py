@@ -244,7 +244,7 @@ def get_genparticles_and_adjacencies( prop_data, hit_data, calohit_links, sitrac
         pfo_to_calohit, 
         pfo_to_track, 
         gp_to_calohit_beforecalomother
-    )
+    ), dic 
 
 def isProducedInCalo(vertices, BarrelRadius=2150, EndCapZ=2307):
 
@@ -294,12 +294,12 @@ def gen_to_features(prop_data, iev):
     gen_arr = {k.replace(mc_coll + ".", ""): gen_arr[k] for k in gen_arr.fields}
 
     MCParticles_p4 = vector.awk(
-        awkward.zip({"mass": gen_arr["mass"], "x": gen_arr["momentum.x"], "y": gen_arr["momentum.x"], "z": gen_arr["momentum.z"]})
+        awkward.zip({"mass": gen_arr["mass"], "x": gen_arr["momentum.x"], "y": gen_arr["momentum.y"], "z": gen_arr["momentum.z"]})
     )
 
     parents = prop_data["_MCParticles_parents/_MCParticles_parents.index"][iev]
     gen_arr["pt"] = MCParticles_p4.pt
-    gen_arr["p"] = np.sqrt(gen_arr["momentum.x"]**2 + gen_arr["momentum.x"]**2 + gen_arr["momentum.z"]**2)
+    gen_arr["p"] = np.sqrt(gen_arr["momentum.x"]**2 + gen_arr["momentum.y"]**2 + gen_arr["momentum.z"]**2)
     gen_arr["eta"] = MCParticles_p4.eta
     gen_arr["phi"] = MCParticles_p4.phi
     gen_arr["energy"] = MCParticles_p4.energy
