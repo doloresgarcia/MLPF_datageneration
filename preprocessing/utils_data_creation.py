@@ -28,6 +28,9 @@ particle_feature_order = [
 "vertex.x",
 "vertex.y",
 "vertex.z",
+"endpoint.x",
+"endpoint.y",
+"endpoint.z",
 ]
 PandoraPFO_feature_order = [
     "PDG", 
@@ -121,13 +124,13 @@ def build_dummy_array(num, dtype=np.int64):
         )
     )
 
-def get_genparticles_and_adjacencies( prop_data, hit_data, calohit_links, sitrack_links, iev, collectionIDs, eval_dataset=False, dic=None):
+def get_genparticles_and_adjacencies( prop_data, hit_data, calohit_links, sitrack_links, iev, collectionIDs, eval_dataset=False, dic=None, truth_tracking=False):
     gen_features = gen_to_features(prop_data, iev)
     
     hit_features, genparticle_to_hit, hit_idx_local_to_global = get_calohit_matrix_and_genadj(hit_data, calohit_links, iev, collectionIDs)
     track_features = track_to_features(prop_data, iev)
-    genparticle_to_trk = genparticle_track_adj( sitrack_links, iev)
-
+    genparticle_to_trk = genparticle_track_adj( sitrack_links, iev, truth_tracking)
+    print(genparticle_to_trk)
     n_gp = awkward.count(gen_features["PDG"])
     n_track = awkward.count(track_features["type"])
     n_hit = awkward.count(hit_features["type"])
@@ -339,6 +342,9 @@ def gen_to_features(prop_data, iev):
         "vertex.x"      : gen_arr["vertex.x"],
         "vertex.y"      : gen_arr["vertex.y"],
         "vertex.z"      : gen_arr["vertex.z"],
+        "endpoint.x"    : gen_arr["endpoint.x"],
+        "endpoint.y"    : gen_arr["endpoint.y"],
+        "endpoint.z"    : gen_arr["endpoint.z"],
     }
 
 
@@ -484,15 +490,21 @@ def track_pt(omega):
     b = 2  # B-field in tesla, for CLD
     return a * np.abs(b / omega)
 
-def genparticle_track_adj(sitrack_links, iev):
-    trk_to_gen_trkidx = sitrack_links["_SiTracksMCTruthLink_from/_SiTracksMCTruthLink_from.index"][iev]
-    trk_to_gen_genidx = sitrack_links["_SiTracksMCTruthLink_to/_SiTracksMCTruthLink_to.index"][iev]
-    trk_to_gen_w = sitrack_links["SiTracksMCTruthLink.weight"][iev]
+def genparticle_track_adj(sitrack_links, iev, truth_tracking):
+    print("here", truth_tracking)
+    if truth_tracking:
+        trk_to_gen_trkidx = sitrack_links["_SiTracks_Refitted_Relation_from/_SiTracks_Refitted_Relation_from.index"][iev]
+        trk_to_gen_genidx = sitrack_links["_SiTracks_Refitted_Relation_to/_SiTracks_Refitted_Relation_to.index"][iev]
+        trk_to_gen_w = sitrack_links["SiTracks_Refitted_Relation.weight"][iev]
+    else:
+        trk_to_gen_trkidx = sitrack_links["_SiTracksMCTruthLink_from/_SiTracksMCTruthLink_from.index"][iev]
+        trk_to_gen_genidx = sitrack_links["_SiTracksMCTruthLink_to/_SiTracksMCTruthLink_to.index"][iev]
+        trk_to_gen_w = sitrack_links["SiTracksMCTruthLink.weight"][iev]
 
     genparticle_to_track_matrix_coo0 = awkward.to_numpy(trk_to_gen_genidx)
     genparticle_to_track_matrix_coo1 = awkward.to_numpy(trk_to_gen_trkidx)
     genparticle_to_track_matrix_w = awkward.to_numpy(trk_to_gen_w)
-
+    print(genparticle_to_track_matrix_coo0)
     return genparticle_to_track_matrix_coo0, genparticle_to_track_matrix_coo1, genparticle_to_track_matrix_w
 
 

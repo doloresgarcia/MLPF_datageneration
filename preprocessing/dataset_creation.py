@@ -8,12 +8,12 @@ from preprocessing.utils_data_creation import track_feature_order, hit_feature_o
 from preprocessing.utils_data_creation import  get_genparticles_and_adjacencies, mc_coll, track_coll
 import time 
 
-def process_one_file(fn, ofn, eval_dataset):
+def process_one_file(fn, ofn, eval_dataset, truth_tracking):
 
     # output exists, do not recreate
-    if os.path.isfile(ofn):
-        return
-    print(fn)
+    # if os.path.isfile(ofn):
+    #     return
+    # print(fn)
 
     fi = uproot.open(fn)
 
@@ -48,7 +48,7 @@ def process_one_file(fn, ofn, eval_dataset):
             "_PandoraClusters_hits/_PandoraClusters_hits.collectionID",
             "PandoraPFOs",
             "_PandoraPFOs_clusters/_PandoraPFOs_clusters.index",
-            "SiTracks_Refitted_dQdx",
+            # "SiTracks_Refitted_dQdx",
         ]
     )
     calohit_links = arrs.arrays(
@@ -60,7 +60,18 @@ def process_one_file(fn, ofn, eval_dataset):
             "_CalohitMCTruthLink_from/_CalohitMCTruthLink_from.index",
         ]
     )
-    sitrack_links = arrs.arrays(
+    if truth_tracking:
+        sitrack_links = arrs.arrays(
+            [
+                "SiTracks_Refitted_Relation.weight",
+                "_SiTracks_Refitted_Relation_to/_SiTracks_Refitted_Relation_to.collectionID",
+                "_SiTracks_Refitted_Relation_to/_SiTracks_Refitted_Relation_to.index",
+                "_SiTracks_Refitted_Relation_from/_SiTracks_Refitted_Relation_from.collectionID",
+                "_SiTracks_Refitted_Relation_from/_SiTracks_Refitted_Relation_from.index",
+            ]
+        )
+    else:
+         sitrack_links = arrs.arrays(
         [
             "SiTracksMCTruthLink.weight",
             "_SiTracksMCTruthLink_to/_SiTracksMCTruthLink_to.collectionID",
@@ -100,7 +111,7 @@ def process_one_file(fn, ofn, eval_dataset):
     
     
         # get the genparticles and the links between genparticles and tracks/clusters
-        gpdata, dic  = get_genparticles_and_adjacencies( prop_data, hit_data, calohit_links, sitrack_links, iev, collectionIDs, eval_dataset, dic)
+        gpdata, dic  = get_genparticles_and_adjacencies( prop_data, hit_data, calohit_links, sitrack_links, iev, collectionIDs, eval_dataset, dic, truth_tracking)
 
 
         n_tracks = len(gpdata.track_features["type"])
@@ -167,16 +178,18 @@ def parse_args():
     parser.add_argument("--input", type=str, help="Input file ROOT file", required=True)
     parser.add_argument("--outpath", type=str, default="raw", help="output path")
     parser.add_argument("--dataset", action="store_true", default=False, help="is dataset for eval")
+    parser.add_argument("--truth", action="store_true", default=False, help="do tracks come from gen")
     args = parser.parse_args()
     return args
 
 
 def process(args):
     infile = args.input
+    truth_tracking = args.truth
     outfile = os.path.join(args.outpath, os.path.basename(infile).split(".")[0] + ".parquet")
     eval_dataset = args.dataset 
     tic = time.time()
-    process_one_file(infile, outfile, eval_dataset)
+    process_one_file(infile, outfile, eval_dataset,truth_tracking)
     toc = time.time()
     print("Processing time: ", toc - tic)
 

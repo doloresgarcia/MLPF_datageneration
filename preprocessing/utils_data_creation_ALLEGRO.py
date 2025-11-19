@@ -27,6 +27,9 @@ particle_feature_order = [
 "vertex.x",
 "vertex.y",
 "vertex.z",
+"endpoint.x",
+"endpoint.y",
+"endpoint.z",
 ]
 PandoraPFO_feature_order = [
     "PDG", 
@@ -338,6 +341,9 @@ def gen_to_features(prop_data, iev):
         "vertex.x"      : gen_arr["vertex.x"],
         "vertex.y"      : gen_arr["vertex.y"],
         "vertex.z"      : gen_arr["vertex.z"],
+        "endpoint.x"    : gen_arr["endpoint.x"],
+        "endpoint.y"    : gen_arr["endpoint.y"],
+        "endpoint.z"    : gen_arr["endpoint.z"],
     }
 
 
